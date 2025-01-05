@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"fmt"
-	"net/http"
 	"strings"
 
 	"go_auth/config"
@@ -16,7 +15,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		// Ambil token dari header Authorization
 		tokenString := c.GetHeader("Authorization")
 		if tokenString == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization token required"})
+			c.JSON(401, gin.H{"error": "Authorization token required"})
 			c.Abort()
 			return
 		}
@@ -38,7 +37,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			// Ambil `user_id` dari klaim token
 			currentID, ok := claims["user_id"].(float64) // `float64` karena nilai dari MapClaims default-nya float
 			if !ok {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+				c.JSON(401, gin.H{"error": "Invalid token claims"})
 				c.Abort()
 				return
 			}
@@ -47,7 +46,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			c.Set("current_id", uint(currentID)) // Konversi ke `uint` sesuai tipe yang digunakan
 			c.Set("role", claims["role"])        // Simpan juga role jika diperlukan
 		} else {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			c.JSON(401, gin.H{"error": err.Error()})
 			c.Abort()
 			return
 		}

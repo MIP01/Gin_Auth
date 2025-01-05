@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"go_auth/config"
+	"go_auth/middleware"
 	"go_auth/model"
 
 	"github.com/gin-gonic/gin"
@@ -10,26 +11,41 @@ import (
 )
 
 func CreateUserHandler(c *gin.Context) {
-	var user model.User
-	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+	var userData middleware.UserSchema
+	if err := c.ShouldBindJSON(&userData); err != nil {
+		errors := middleware.FormatValidationErrors(err)
+		c.JSON(400, gin.H{"errors": errors})
+		return
+	}
+
+	validationErrors := middleware.ValidateInput(userData)
+	if validationErrors != nil {
+		c.JSON(400, gin.H{"errors": validationErrors})
 		return
 	}
 
 	// Hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userData.Password), bcrypt.DefaultCost)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to hash password"})
 		return
 	}
 
-	user.Password = string(hashedPassword)
+	userData.Password = string(hashedPassword)
 
-	if err := config.DB.Create(&user).Error; err != nil {
+	newUser := model.User{
+		Name:     userData.Name,
+		Email:    userData.Email,
+		Password: userData.Password,
+		Role:     "user", // Atur default role
+	}
+
+	if err := config.DB.Create(&newUser).Error; err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(201, gin.H{"message": "User created successfully", "user": user})
+
+	c.JSON(201, gin.H{"message": "User created successfully", "user": userData})
 }
 
 func GetAllUserHandler(c *gin.Context) {
@@ -91,17 +107,27 @@ func UpdateUserHandler(c *gin.Context) {
 		return
 	}
 
-	// Bind data JSON yang akan di-update
-	var updatedData model.User
+	// Memvalidasi input dengan Middleware ValidateInput.
+	var updatedData middleware.UpdateSchema
 	if err := c.ShouldBindJSON(&updatedData); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		errors := middleware.FormatValidationErrors(err)
+		c.JSON(400, gin.H{"errors": errors})
 		return
 	}
 
-	// Update field yang diperbolehkan
-	user.Name = updatedData.Name
-	user.Email = updatedData.Email
+	validationErrors := middleware.ValidateInput(updatedData)
+	if validationErrors != nil {
+		c.JSON(400, gin.H{"errors": validationErrors})
+		return
+	}
 
+	// Perbarui field yang diberikan
+	if updatedData.Name != "" {
+		user.Name = updatedData.Name
+	}
+	if updatedData.Email != "" {
+		user.Email = updatedData.Email
+	}
 	// Jika password diperbarui, hash terlebih dahulu
 	if updatedData.Password != "" {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(updatedData.Password), bcrypt.DefaultCost)

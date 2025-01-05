@@ -15,8 +15,8 @@ func SetupRoutes(api *gin.RouterGroup) {
 	api.Use(middleware.AuthMiddleware())
 	{
 		api.POST("/logout", middleware.LogoutHandler)
-		api.GET("/user/:id", controller.GetUserHandler) // Tambahkan parameter ID
-		api.PUT("/user", controller.UpdateUserHandler)
-		api.DELETE("/user", controller.DeleteUserHandler)
+		api.GET("/user/:id", controller.GetUserHandler)
+		api.PUT("/user/:id", controller.UpdateUserHandler)
+		api.DELETE("/user/:id", controller.DeleteUserHandler)
 	}
 }
