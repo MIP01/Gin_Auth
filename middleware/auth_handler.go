@@ -26,15 +26,29 @@ func LoginHandler(c *gin.Context) {
 		return
 	}
 
-	// Cari pengguna berdasarkan email
+	// Cari pengguna di semua model
 	var user model.User
+	var admin model.Admin
+
 	if err := config.DB.Where("email = ?", loginData.Email).First(&user).Error; err != nil {
-		c.JSON(401, gin.H{"error": "Invalid email or password"})
-		return
+		if err := config.DB.Where("email = ?", loginData.Email).First(&admin).Error; err != nil {
+			c.JSON(401, gin.H{"error": "Invalid email or password"})
+			return
+		}
 	}
 
 	// Verifikasi password
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginData.Password)); err != nil {
+	if user.ID != 0 {
+		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginData.Password)); err != nil {
+			c.JSON(401, gin.H{"error": "Invalid email or password"})
+			return
+		}
+	} else if admin.ID != 0 {
+		if err := bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(loginData.Password)); err != nil {
+			c.JSON(401, gin.H{"error": "Invalid email or password"})
+			return
+		}
+	} else {
 		c.JSON(401, gin.H{"error": "Invalid email or password"})
 		return
 	}
@@ -45,6 +59,14 @@ func LoginHandler(c *gin.Context) {
 		"role":    user.Role,
 		"exp":     time.Now().Add(config.JWTExpireDuration()).Unix(),
 	})
+
+	if admin.ID != 0 {
+		token = jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"user_id": admin.ID,
+			"role":    admin.Role,
+			"exp":     time.Now().Add(config.JWTExpireDuration()).Unix(),
+		})
+	}
 
 	tokenString, err := token.SignedString([]byte(config.JWTSecret))
 	if err != nil {

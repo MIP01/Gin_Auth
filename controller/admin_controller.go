@@ -10,55 +10,55 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func CreateUserHandler(c *gin.Context) {
-	var userData middleware.UserSchema
-	if err := c.ShouldBindJSON(&userData); err != nil {
+func CreateAdminHandler(c *gin.Context) {
+	var adminData middleware.UserSchema
+	if err := c.ShouldBindJSON(&adminData); err != nil {
 		errors := middleware.FormatValidationErrors(err)
 		c.JSON(400, gin.H{"errors": errors})
 		return
 	}
 
-	validationErrors := middleware.ValidateInput(userData)
+	validationErrors := middleware.ValidateInput(adminData)
 	if validationErrors != nil {
 		c.JSON(400, gin.H{"errors": validationErrors})
 		return
 	}
 
 	// Hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userData.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(adminData.Password), bcrypt.DefaultCost)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to hash password"})
 		return
 	}
 
-	userData.Password = string(hashedPassword)
+	adminData.Password = string(hashedPassword)
 
-	newUser := model.User{
-		Name:     userData.Name,
-		Email:    userData.Email,
-		Password: userData.Password,
-		Role:     "user", // Atur default role
+	newAdmin := model.Admin{
+		Name:     adminData.Name,
+		Email:    adminData.Email,
+		Password: adminData.Password,
+		Role:     "admin", // Atur default role
 	}
 
-	if err := config.DB.Create(&newUser).Error; err != nil {
+	if err := config.DB.Create(&newAdmin).Error; err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(201, gin.H{"message": "User created successfully", "user": newUser.ToMap()})
+	c.JSON(201, gin.H{"message": "Admin created successfully", "admin": newAdmin.ToMap()})
 }
 
-func GetAllUserHandler(c *gin.Context) {
-	var user []model.User
-	if err := config.DB.Find(&user).Error; err != nil {
+func GetAllAdminHandler(c *gin.Context) {
+	var admin []model.Admin
+	if err := config.DB.Find(&admin).Error; err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"user": model.UsersToMap(user)})
+	c.JSON(200, gin.H{"admin": model.AdminsToMap(admin)})
 }
 
-func GetUserHandler(c *gin.Context) {
-	// Ambil ID user dari parameter URL
+func GetAdminHandler(c *gin.Context) {
+	// Ambil ID admin dari parameter URL
 	id := c.Param("id")
 
 	// Ambil current_id dan role dari context (diset oleh middleware)
@@ -74,17 +74,17 @@ func GetUserHandler(c *gin.Context) {
 		return
 	}
 
-	// Pastikan user ada
-	var user model.User
-	if err := config.DB.First(&user, id).Error; err != nil {
-		c.JSON(404, gin.H{"error": "User not found"})
+	// Pastikan admin ada
+	var admin model.Admin
+	if err := config.DB.First(&admin, id).Error; err != nil {
+		c.JSON(404, gin.H{"error": "Admin not found"})
 		return
 	}
 
-	c.JSON(200, user.ToMap())
+	c.JSON(200, admin.ToMap())
 }
 
-func UpdateUserHandler(c *gin.Context) {
+func UpdateAdminHandler(c *gin.Context) {
 	id := c.Param("id")
 
 	// Ambil current_id dan role dari context (diset oleh middleware)
@@ -100,10 +100,10 @@ func UpdateUserHandler(c *gin.Context) {
 		return
 	}
 
-	// Pastikan user ada
-	var user model.User
-	if err := config.DB.First(&user, id).Error; err != nil {
-		c.JSON(404, gin.H{"error": "User not found"})
+	// Pastikan admin ada
+	var admin model.Admin
+	if err := config.DB.First(&admin, id).Error; err != nil {
+		c.JSON(404, gin.H{"error": "Admin not found"})
 		return
 	}
 
@@ -123,10 +123,10 @@ func UpdateUserHandler(c *gin.Context) {
 
 	// Perbarui field yang diberikan
 	if updatedData.Name != "" {
-		user.Name = updatedData.Name
+		admin.Name = updatedData.Name
 	}
 	if updatedData.Email != "" {
-		user.Email = updatedData.Email
+		admin.Email = updatedData.Email
 	}
 	// Jika password diperbarui, hash terlebih dahulu
 	if updatedData.Password != "" {
@@ -135,18 +135,18 @@ func UpdateUserHandler(c *gin.Context) {
 			c.JSON(500, gin.H{"error": "Failed to hash password"})
 			return
 		}
-		user.Password = string(hashedPassword)
+		admin.Password = string(hashedPassword)
 	}
 
-	if err := config.DB.Save(&user).Error; err != nil {
+	if err := config.DB.Save(&admin).Error; err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(200, gin.H{"message": "User updated successfully", "user": user.ToMap()})
+	c.JSON(200, gin.H{"message": "Admin updated successfully", "admin": admin.ToMap()})
 }
 
-func DeleteUserHandler(c *gin.Context) {
+func DeleteAdminHandler(c *gin.Context) {
 	id := c.Param("id")
 
 	// Ambil current_id dan role dari context (diset oleh middleware)
@@ -162,18 +162,18 @@ func DeleteUserHandler(c *gin.Context) {
 		return
 	}
 
-	// Pastikan user ada
-	var user model.User
-	if err := config.DB.First(&user, id).Error; err != nil {
-		c.JSON(404, gin.H{"error": "User not found"})
+	// Pastikan admin ada
+	var admin model.Admin
+	if err := config.DB.First(&admin, id).Error; err != nil {
+		c.JSON(404, gin.H{"error": "Admin not found"})
 		return
 	}
 
-	// Hapus user
-	if err := config.DB.Delete(&user).Error; err != nil {
+	// Hapus admin
+	if err := config.DB.Delete(&admin).Error; err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(200, gin.H{"message": "User deleted successfully"})
+	c.JSON(200, gin.H{"message": "Admin deleted successfully"})
 }

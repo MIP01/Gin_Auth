@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go_auth/model"
+
 	"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -30,7 +31,7 @@ func InitConfig() {
 	}
 
 	// AutoMigrate models
-	if err := db.AutoMigrate(&model.User{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.Admin{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -39,5 +40,5 @@ func InitConfig() {
 }
 
 func JWTExpireDuration() time.Duration {
-	return time.Hour * 24
+	return time.Hour * 1
 }
